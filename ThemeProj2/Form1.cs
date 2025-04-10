@@ -241,6 +241,12 @@ namespace ThemeProj2
             }
         }
 
+        private void button1_Click(object sender, EventArgs e)
+        {
+            InfoForm infoForm = new InfoForm();
+            infoForm.Show();
+        }
+
         // Genre context menu
         private void deleteRowToolStripMenuItem1_Click(object sender, EventArgs e)
         {
