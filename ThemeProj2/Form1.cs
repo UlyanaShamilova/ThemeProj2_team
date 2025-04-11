@@ -15,8 +15,8 @@ namespace ThemeProj2
     {
         DataSet ds = new DataSet();
         DataView dvArtists, dvAlbums, dvArtistsAlbums;
-        const string DefaultXMLFileName = "Музика.xml";
-        const string DefaultXMLSchemaFileName = "Музика.xsd";
+        const string DefaultXMLFileName = "Database.xml";
+        const string DefaultXMLSchemaFileName = "Database.xsd";
 
         private string currentXMLFilePath = Path.Combine(Application.StartupPath, DefaultXMLFileName);
 
@@ -33,17 +33,27 @@ namespace ThemeProj2
 
         private void SetupDataGridViews()
         {
-            dataGridView1.Columns["Код_Виконавця"].Visible = false;
+            dataGridView1.Columns["ID_Author"].Visible = false;
 
             //dataGridView1.Columns["photo"].Visible = false;
 
-            if (dataGridView1.Columns.Contains("Назва_x0020_виконавця")) dataGridView1.Columns["Назва_x0020_виконавця"].HeaderText = "Назва виконавця";
+            if (dataGridView1.Columns.Contains("Name_Author")) dataGridView1.Columns["Name_Author"].HeaderText = "Name Author";
 
-            if (dataGridView1.Columns.Contains("Стиль_x0020_музики")) dataGridView1.Columns["Стиль_x0020_музики"].HeaderText = "Стиль музики";
+            if (dataGridView1.Columns.Contains("Style_Music")) dataGridView1.Columns["Style_Music"].HeaderText = "Style Music";
 
-            dataGridView2.Columns["Код_Альбому"].Visible = false;
+            if (dataGridView1.Columns.Contains("country")) dataGridView1.Columns["country"].HeaderText = "country";
 
-            if (dataGridView2.Columns.Contains("Назва_x0020_альбому")) dataGridView2.Columns["Назва_x0020_альбому"].HeaderText = "Назва альбому";
+            if (dataGridView1.Columns.Contains("start_year")) dataGridView1.Columns["start_year"].HeaderText = "start year";
+
+            dataGridView2.Columns["ID_Album"].Visible = false;
+
+            if (dataGridView2.Columns.Contains("Name_Album")) dataGridView2.Columns["Name_Album"].HeaderText = "Name Album";
+
+            if (dataGridView2.Columns.Contains("Year_Album")) dataGridView2.Columns["Year_Album"].HeaderText = "Year Album";
+
+            if (dataGridView2.Columns.Contains("tracks_number")) dataGridView2.Columns["tracks_number"].HeaderText = "tracks number";
+
+            if (dataGridView2.Columns.Contains("duration")) dataGridView2.Columns["duration"].HeaderText = "duration";
 
             if (!dataGridView2.Columns.Contains("assigned"))
             {
@@ -108,9 +118,9 @@ namespace ThemeProj2
 
                 #endregion
 
-                dvArtists = new DataView(ds.Tables["Виконавці"]);
-                dvAlbums = new DataView(ds.Tables["Альбоми"]);
-                dvArtistsAlbums = new DataView(ds.Tables["Виконавці_Альбоми"]);
+                dvArtists = new DataView(ds.Tables["Artists"]);
+                dvAlbums = new DataView(ds.Tables["Albums"]);
+                dvArtistsAlbums = new DataView(ds.Tables["ArtAlb"]);
 
                 dataGridView1.DataSource = dvArtists;
                 dataGridView2.DataSource = dvAlbums;
@@ -144,8 +154,8 @@ namespace ThemeProj2
                 return;
 
             // Get the selected game id and the genre id
-            int? selectedGameId = (int?)currentGameRow.Cells["Код_Виконавця"].Value;
-            int? genreId = (int?)genreRow["Код_Альбому"];
+            int? selectedGameId = (int?)currentGameRow.Cells["ID_Author"].Value;
+            int? genreId = (int?)genreRow["ID_Album"];
             if (selectedGameId == null || genreId == null)
                 return;
 
@@ -153,13 +163,13 @@ namespace ThemeProj2
             bool isChecked = !Convert.ToBoolean(dataGridView2.Rows[e.RowIndex].Cells["assigned"].Value);
 
             // Filter the GameGenres table to check if the genre is already assigned to the game
-            dvArtistsAlbums.RowFilter = $"Код_Виконавця = '{selectedGameId}' AND Код_Альбому = '{genreId}'";
+            dvArtistsAlbums.RowFilter = $"ID_Author = '{selectedGameId}' AND ID_Album = '{genreId}'";
 
             if (isChecked && dvArtistsAlbums.Count == 0)
             {
                 DataRowView newRow = dvArtistsAlbums.AddNew();
-                newRow["Код_Виконавця"] = selectedGameId;
-                newRow["Код_Альбому"] = genreId;
+                newRow["ID_Author"] = selectedGameId;
+                newRow["ID_Album"] = genreId;
                 newRow.EndEdit();
             }
             else if (!isChecked && dvArtistsAlbums.Count > 0)
@@ -183,21 +193,21 @@ namespace ThemeProj2
             if (gameRowIndex < 0) return;
 
             // Get selected game id
-            int? selectedGameId = (int?)dataGridView1.Rows[gameRowIndex].Cells["Код_Виконавця"].Value;
+            int? selectedGameId = (int?)dataGridView1.Rows[gameRowIndex].Cells["ID_Author"].Value;
             if (selectedGameId == null) return;
 
             // Filter the GameGenres table to get the genres assigned to the selected game
-            dvArtistsAlbums.RowFilter = $"Код_Виконавця = '{selectedGameId}'";
+            dvArtistsAlbums.RowFilter = $"ID_Author = '{selectedGameId}'";
             List<string> genreIds = new List<string>();
             foreach (DataRowView row in dvArtistsAlbums)
-                genreIds.Add(row["Код_Альбому"].ToString());
+                genreIds.Add(row["ID_Album"].ToString());
 
             // Check the assigned genres
             foreach (DataGridViewRow row in dataGridView2.Rows)
             {
                 DataRowView drv = row.DataBoundItem as DataRowView;
                 if (drv != null)
-                    row.Cells["assigned"].Value = genreIds.Contains(drv["Код_Альбому"].ToString());
+                    row.Cells["assigned"].Value = genreIds.Contains(drv["ID_Album"].ToString());
             }
 
             dvArtistsAlbums.RowFilter = "";
@@ -225,8 +235,8 @@ namespace ThemeProj2
             DataRowView drv = dataGridView1.CurrentRow.DataBoundItem as DataRowView;
             if (drv != null)
             {
-                int? gameId = (int?)drv["Код_Виконавця"];
-                dvArtistsAlbums.RowFilter = $"Код_Виконавця = {gameId}";
+                int? gameId = (int?)drv["ID_Author"];
+                dvArtistsAlbums.RowFilter = $"ID_Author = {gameId}";
 
                 foreach (DataRowView row in dvArtistsAlbums)
                 {
@@ -234,8 +244,8 @@ namespace ThemeProj2
                 }
 
                 drv.Delete();
-                ds.Tables["Виконавці"].AcceptChanges();
-                ds.Tables["Виконавці_Альбоми"].AcceptChanges();
+                ds.Tables["Artists"].AcceptChanges();
+                ds.Tables["ArtAlb"].AcceptChanges();
 
                 UpdateGenreAssignments(dataGridView1.CurrentRow?.Index ?? -1);
             }
@@ -255,8 +265,8 @@ namespace ThemeProj2
             DataRowView drv = dataGridView2.CurrentRow.DataBoundItem as DataRowView;
             if (drv != null)
             {
-                string genreId = drv["Код_Альбому"].ToString();
-                dvArtistsAlbums.RowFilter = $"Код_Альбому = {genreId}";
+                string genreId = drv["ID_Album"].ToString();
+                dvArtistsAlbums.RowFilter = $"ID_Album = {genreId}";
 
                 foreach (DataRowView row in dvArtistsAlbums)
                 {
@@ -264,8 +274,8 @@ namespace ThemeProj2
                 }
 
                 drv.Delete();
-                ds.Tables["Виконавці"].AcceptChanges();
-                ds.Tables["Альбоми"].AcceptChanges();
+                ds.Tables["Artists"].AcceptChanges();
+                ds.Tables["Albums"].AcceptChanges();
 
                 UpdateGenreAssignments(dataGridView1.CurrentRow?.Index ?? -1);
             }
