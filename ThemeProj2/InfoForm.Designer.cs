@@ -38,31 +38,35 @@
             // 
             this.label1.Font = new System.Drawing.Font("Consolas", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.label1.ForeColor = System.Drawing.SystemColors.ButtonFace;
-            this.label1.Location = new System.Drawing.Point(13, 13);
+            this.label1.Location = new System.Drawing.Point(20, 20);
+            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(955, 428);
+            this.label1.Size = new System.Drawing.Size(1432, 658);
             this.label1.TabIndex = 0;
             this.label1.Text = resources.GetString("label1.Text");
             // 
             // pictureBox1
             // 
             this.pictureBox1.Image = global::ThemeProj2.Properties.Resources.pngegg;
-            this.pictureBox1.Location = new System.Drawing.Point(17, 190);
+            this.pictureBox1.Location = new System.Drawing.Point(26, 292);
+            this.pictureBox1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(951, 365);
+            this.pictureBox1.Size = new System.Drawing.Size(1426, 562);
             this.pictureBox1.TabIndex = 1;
             this.pictureBox1.TabStop = false;
             // 
             // InfoForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.Maroon;
-            this.ClientSize = new System.Drawing.Size(980, 560);
+            this.ClientSize = new System.Drawing.Size(1458, 844);
             this.Controls.Add(this.pictureBox1);
             this.Controls.Add(this.label1);
             this.DoubleBuffered = true;
+            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "InfoForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Credited by";
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);

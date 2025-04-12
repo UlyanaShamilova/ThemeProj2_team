@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ThemeProj2.Properties;
 
 namespace ThemeProj2
 {
@@ -17,7 +18,6 @@ namespace ThemeProj2
         DataView dvArtists, dvAlbums, dvArtistsAlbums;
         const string DefaultXMLFileName = "Database.xml";
         const string DefaultXMLSchemaFileName = "Database.xsd";
-
         private string currentXMLFilePath = Path.Combine(Application.StartupPath, DefaultXMLFileName);
 
         public Form1()
@@ -29,31 +29,31 @@ namespace ThemeProj2
         {
             LoadXMLData(currentXMLFilePath);
             SetupDataGridViews();
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
         }
 
         private void SetupDataGridViews()
         {
             dataGridView1.Columns["ID_Author"].Visible = false;
-
-            //dataGridView1.Columns["photo"].Visible = false;
-
-            if (dataGridView1.Columns.Contains("Name_Author")) dataGridView1.Columns["Name_Author"].HeaderText = "Name Author";
-
-            if (dataGridView1.Columns.Contains("Style_Music")) dataGridView1.Columns["Style_Music"].HeaderText = "Style Music";
-
-            if (dataGridView1.Columns.Contains("country")) dataGridView1.Columns["country"].HeaderText = "country";
-
-            if (dataGridView1.Columns.Contains("start_year")) dataGridView1.Columns["start_year"].HeaderText = "start year";
-
             dataGridView2.Columns["ID_Album"].Visible = false;
+            dataGridView1.Columns["name_media"].Visible = false;
+            dataGridView2.Columns["cover"].Visible = false;
 
-            if (dataGridView2.Columns.Contains("Name_Album")) dataGridView2.Columns["Name_Album"].HeaderText = "Name Album";
+            if (dataGridView1.Columns.Contains("Name_Author")) dataGridView1.Columns["Name_Author"].HeaderText = "Name author";
 
-            if (dataGridView2.Columns.Contains("Year_Album")) dataGridView2.Columns["Year_Album"].HeaderText = "Year Album";
+            if (dataGridView1.Columns.Contains("Style_Music")) dataGridView1.Columns["Style_Music"].HeaderText = "Style music";
 
-            if (dataGridView2.Columns.Contains("tracks_number")) dataGridView2.Columns["tracks_number"].HeaderText = "tracks number";
+            if (dataGridView1.Columns.Contains("country")) dataGridView1.Columns["country"].HeaderText = "Country";
 
-            if (dataGridView2.Columns.Contains("duration")) dataGridView2.Columns["duration"].HeaderText = "duration";
+            if (dataGridView1.Columns.Contains("start_year")) dataGridView1.Columns["start_year"].HeaderText = "Start year";
+
+            if (dataGridView2.Columns.Contains("Name_Album")) dataGridView2.Columns["Name_Album"].HeaderText = "Name album";
+
+            if (dataGridView2.Columns.Contains("Year_Album")) dataGridView2.Columns["Year_Album"].HeaderText = "Year album";
+
+            if (dataGridView2.Columns.Contains("tracks_number")) dataGridView2.Columns["tracks_number"].HeaderText = "Tracks number";
+
+            if (dataGridView2.Columns.Contains("duration")) dataGridView2.Columns["duration"].HeaderText = "Duration";
 
             if (!dataGridView2.Columns.Contains("assigned"))
             {
@@ -137,39 +137,111 @@ namespace ThemeProj2
         private void dataGridView1_RowEnter(object sender, DataGridViewCellEventArgs e)
         {
             int rowIndex = e.RowIndex;
-            UpdateGenreAssignments(rowIndex);
-            //LoadGameImage(rowIndex);
+            UpdateAlbumAssignments(rowIndex);
+        }
+
+        private void UpdateAlbumAssignments(int artistRowIndex)
+        {
+            foreach (DataGridViewRow row in dataGridView2.Rows)
+            {
+                row.Cells["assigned"].Value = false;
+            }
+
+            if (artistRowIndex < 0) return;
+
+            int? selectedArtistId = (int?)dataGridView1.Rows[artistRowIndex].Cells["ID_Author"].Value;
+            if (selectedArtistId == null) return;
+
+            Dictionary<string, bool> ArtAlb = GetAssignedArtAlb(selectedArtistId.Value);
+
+            foreach (DataGridViewRow row in dataGridView2.Rows)
+            {
+                DataRowView drv = row.DataBoundItem as DataRowView;
+                if (drv != null) row.Cells["assigned"].Value = ArtAlb[drv["Name_Album"].ToString()];
+            }
+
+            dvArtistsAlbums.RowFilter = "";
+        }
+
+        public Dictionary<string, bool> GetAssignedArtAlb(int artistId)
+        {
+            Dictionary<string, bool> ArtAlb = new Dictionary<string, bool>();
+            dvAlbums.RowFilter = "";
+            foreach (DataRowView row in dvAlbums)
+            {
+                var albumId = row["ID_Album"].ToString();
+                dvArtistsAlbums.RowFilter = $"ID_Author = '{artistId}' AND ID_Album = '{albumId}'";
+                bool isAssigned = dvArtistsAlbums.Count > 0;
+
+                if (!ArtAlb.ContainsKey(row["Name_Album"].ToString()))
+                {
+                    ArtAlb.Add(row["Name_Album"].ToString(), isAssigned);
+                }
+            }
+            return ArtAlb;
+        }
+
+        public void UpdateRowAssignments(int artistId, Dictionary<string, bool> albumAssignments)
+        {
+            foreach (KeyValuePair<string, bool> albumAssignment in albumAssignments)
+            {
+                dvAlbums.RowFilter = $"Name_Album = '{albumAssignment.Key}'";
+                int albumId = (int)dvAlbums[0]["ID_Album"];
+                bool isChecked = albumAssignment.Value;
+
+                dvArtistsAlbums.RowFilter = $"ID_Author = '{artistId}' AND ID_Album = '{albumId}'";
+                if (isChecked && dvArtistsAlbums.Count == 0)
+                {
+                    DataRowView newRow = dvArtistsAlbums.AddNew();
+                    newRow["ID_Author"] = artistId;
+                    newRow["ID_Album"] = albumId;
+                    newRow.EndEdit();
+                }
+                else if (!isChecked && dvArtistsAlbums.Count > 0)
+                {
+                    dvArtistsAlbums.Delete(0);
+                }
+            }
+
+            UpdateAlbumAssignments(dataGridView1.CurrentRow.Index);
+        }
+
+        public DataRowView GetFirstArtistRow()
+        {
+            return GetArtistRow(0);
+        }
+
+        public DataRowView GetLastArtistRow()
+        {
+            return GetArtistRow(dataGridView1.Rows.Count - 2);
+        }
+
+        public DataRowView GetArtistRow(int rowIndex)
+        {
+            return dataGridView1.Rows[rowIndex].DataBoundItem as DataRowView;
         }
 
         private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-            // Check if the row index is valid and the column name is "assigned"
-            if (e.RowIndex < 0 || dataGridView2.Columns[e.ColumnIndex].Name != "assigned")
-                return;
+            if (e.RowIndex < 0 || dataGridView2.Columns[e.ColumnIndex].Name != "assigned") return;
 
-            // Get the selected game row and the genre row
-            DataGridViewRow currentGameRow = dataGridView1.CurrentRow;
-            DataRowView genreRow = dataGridView2.Rows[e.RowIndex].DataBoundItem as DataRowView;
-            if (currentGameRow == null || genreRow == null)
-                return;
+            DataGridViewRow currentArtistRow = dataGridView1.CurrentRow;
+            DataRowView albumRow = dataGridView2.Rows[e.RowIndex].DataBoundItem as DataRowView;
+            if (currentArtistRow == null || albumRow == null) return;
 
-            // Get the selected game id and the genre id
-            int? selectedGameId = (int?)currentGameRow.Cells["ID_Author"].Value;
-            int? genreId = (int?)genreRow["ID_Album"];
-            if (selectedGameId == null || genreId == null)
-                return;
+            int? selectedArtistId = (int?)currentArtistRow.Cells["ID_Author"].Value;
+            int? albumId = (int?)albumRow["ID_Album"];
+            if (selectedArtistId == null || albumId == null) return;
 
-            // Revert flag because envent is triggered before the value is changed
             bool isChecked = !Convert.ToBoolean(dataGridView2.Rows[e.RowIndex].Cells["assigned"].Value);
 
-            // Filter the GameGenres table to check if the genre is already assigned to the game
-            dvArtistsAlbums.RowFilter = $"ID_Author = '{selectedGameId}' AND ID_Album = '{genreId}'";
+            dvArtistsAlbums.RowFilter = $"ID_Author = '{selectedArtistId}' AND ID_Album = '{albumId}'";
 
             if (isChecked && dvArtistsAlbums.Count == 0)
             {
                 DataRowView newRow = dvArtistsAlbums.AddNew();
-                newRow["ID_Author"] = selectedGameId;
-                newRow["ID_Album"] = genreId;
+                newRow["ID_Author"] = selectedArtistId;
+                newRow["ID_Album"] = albumId;
                 newRow.EndEdit();
             }
             else if (!isChecked && dvArtistsAlbums.Count > 0)
@@ -178,39 +250,7 @@ namespace ThemeProj2
             }
 
             dvArtistsAlbums.RowFilter = "";
-            UpdateGenreAssignments(dataGridView1.CurrentRow.Index);
-        }
-
-        private void UpdateGenreAssignments(int gameRowIndex)
-        {
-            // Clear the assigned column
-            foreach (DataGridViewRow row in dataGridView2.Rows)
-            {
-                row.Cells["assigned"].Value = false;
-            }
-
-            // Check if the row index is valid
-            if (gameRowIndex < 0) return;
-
-            // Get selected game id
-            int? selectedGameId = (int?)dataGridView1.Rows[gameRowIndex].Cells["ID_Author"].Value;
-            if (selectedGameId == null) return;
-
-            // Filter the GameGenres table to get the genres assigned to the selected game
-            dvArtistsAlbums.RowFilter = $"ID_Author = '{selectedGameId}'";
-            List<string> genreIds = new List<string>();
-            foreach (DataRowView row in dvArtistsAlbums)
-                genreIds.Add(row["ID_Album"].ToString());
-
-            // Check the assigned genres
-            foreach (DataGridViewRow row in dataGridView2.Rows)
-            {
-                DataRowView drv = row.DataBoundItem as DataRowView;
-                if (drv != null)
-                    row.Cells["assigned"].Value = genreIds.Contains(drv["ID_Album"].ToString());
-            }
-
-            dvArtistsAlbums.RowFilter = "";
+            UpdateAlbumAssignments(dataGridView1.CurrentRow.Index);
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -226,8 +266,6 @@ namespace ThemeProj2
             }
         }
 
-        // Game context menu
-
         private void deleteRowToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (dataGridView1.CurrentRow == null) return;
@@ -235,8 +273,8 @@ namespace ThemeProj2
             DataRowView drv = dataGridView1.CurrentRow.DataBoundItem as DataRowView;
             if (drv != null)
             {
-                int? gameId = (int?)drv["ID_Author"];
-                dvArtistsAlbums.RowFilter = $"ID_Author = {gameId}";
+                int? artistId = (int?)drv["ID_Author"];
+                dvArtistsAlbums.RowFilter = $"ID_Author = {artistId}";
 
                 foreach (DataRowView row in dvArtistsAlbums)
                 {
@@ -247,17 +285,28 @@ namespace ThemeProj2
                 ds.Tables["Artists"].AcceptChanges();
                 ds.Tables["ArtAlb"].AcceptChanges();
 
-                UpdateGenreAssignments(dataGridView1.CurrentRow?.Index ?? -1);
+                UpdateAlbumAssignments(dataGridView1.CurrentRow?.Index ?? -1);
             }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void label1_Click(object sender, EventArgs e)
         {
             InfoForm infoForm = new InfoForm();
             infoForm.Show();
         }
 
-        // Genre context menu
+        private void detailsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DataRowView row = dataGridView1.CurrentRow?.DataBoundItem as DataRowView;
+            int rowIndex = dataGridView1.CurrentRow.Index;
+            int maxRowIndex = dataGridView1.Rows.Count - 2;
+
+            DetailsForm detailsForm = new DetailsForm(row, rowIndex, maxRowIndex);
+            detailsForm.Owner = this;
+
+            detailsForm.ShowDialog();
+        }
+
         private void deleteRowToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             if (dataGridView2.CurrentRow == null) return;
@@ -265,8 +314,8 @@ namespace ThemeProj2
             DataRowView drv = dataGridView2.CurrentRow.DataBoundItem as DataRowView;
             if (drv != null)
             {
-                string genreId = drv["ID_Album"].ToString();
-                dvArtistsAlbums.RowFilter = $"ID_Album = {genreId}";
+                string albumId = drv["ID_Album"].ToString();
+                dvArtistsAlbums.RowFilter = $"ID_Album = {albumId}";
 
                 foreach (DataRowView row in dvArtistsAlbums)
                 {
@@ -277,30 +326,80 @@ namespace ThemeProj2
                 ds.Tables["Artists"].AcceptChanges();
                 ds.Tables["Albums"].AcceptChanges();
 
-                UpdateGenreAssignments(dataGridView1.CurrentRow?.Index ?? -1);
+                UpdateAlbumAssignments(dataGridView1.CurrentRow?.Index ?? -1);
             }
         }
-
-        //private void LoadGameImage(int gameRowIndex)
-        //{
-        //    pictureBox1.Image = Resources.photo_camera_32dp_B7B7B7_FILL0_wght400_GRAD0_opsz40;
-
-        //    if (gameRowIndex < 0) return;
-
-        //    string photoFileName = dataGridView1.Rows[gameRowIndex].Cells["photo"].Value?.ToString();
-        //    if (string.IsNullOrEmpty(photoFileName)) return;
-
-        //    string photoPath = Path.Combine(Application.StartupPath, "Assets", photoFileName);
-
-        //    if (File.Exists(photoPath))
-        //        pictureBox1.ImageLocation = photoPath;
-        //}
 
         private int GetMaxId(DataTable dt)
         {
             int maxId = dt.Rows.Count;
 
             return maxId + 1;
+        }
+
+        private void dataGridView2_RowEnter(object sender, DataGridViewCellEventArgs e)
+        {
+            DataRowView drv = dataGridView2.Rows[e.RowIndex].DataBoundItem as DataRowView;
+
+            LoadPhoto(drv);
+        }
+
+        private void LoadPhoto(DataRowView drv)
+        {
+            pictureBox1.Image = Resources.stop_photo;
+
+            string photoFileName = drv["cover"]?.ToString();
+
+            string photoPath = Path.Combine(Application.StartupPath, "Assets", photoFileName);
+
+            if (File.Exists(photoPath)) pictureBox1.ImageLocation = photoPath;
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            int currentRowIndex = dataGridView2.CurrentRow.Index;
+
+            if (currentRowIndex < dataGridView2.Rows.Count - 1)
+            {
+                dataGridView2.CurrentCell = dataGridView2.Rows[currentRowIndex + 1].Cells[0];
+
+                DataRowView drv = (DataRowView)dataGridView2.CurrentRow.DataBoundItem;
+
+                LoadPhoto(drv);
+            }
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            int currentRowIndex = dataGridView2.CurrentRow.Index;
+
+            if (currentRowIndex > 0)
+            {
+                dataGridView2.CurrentCell = dataGridView2.Rows[currentRowIndex - 1].Cells[0];
+
+                DataRowView drv = (DataRowView)dataGridView2.CurrentRow.DataBoundItem;
+
+                LoadPhoto(drv);
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            dataGridView2.CurrentCell = dataGridView2.Rows[0].Cells[0];
+
+            DataRowView drv = (DataRowView)dataGridView2.CurrentRow.DataBoundItem;
+
+            LoadPhoto(drv);
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            int lastRowIndex = dataGridView2.Rows.Count - 1;
+            dataGridView2.CurrentCell = dataGridView2.Rows[lastRowIndex].Cells[0];
+
+            DataRowView drv = (DataRowView)dataGridView2.CurrentRow.DataBoundItem;
+
+            LoadPhoto(drv);
         }
     }
 }
