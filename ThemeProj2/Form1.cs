@@ -394,6 +394,7 @@ namespace ThemeProj2
             string filter = GenerateFilter();
             dvArtists.RowFilter = filter;
         }
+        //фильтр по рокам 
         private string GenerateFilter()
         {
             StringBuilder filter = new StringBuilder();
@@ -432,7 +433,7 @@ namespace ThemeProj2
 
             return filter.ToString();
         }
-
+        //чистим
         private void button2_Click(object sender, EventArgs e)
         {
             textBox1.Text = "";
@@ -441,6 +442,7 @@ namespace ThemeProj2
             comboBox1.SelectedIndex = -1;
             dvArtists.RowFilter = "";
         }
+        //єнд/ор фильтр
         private void button3_Click(object sender, EventArgs e)
         {
             string genre = comboBox1.Text;
@@ -462,7 +464,7 @@ namespace ThemeProj2
 
             dvArtists.RowFilter = finalFilter;
         }
-
+        //пошук по частині назви как инпутбокс
         private void button4_Click(object sender, EventArgs e)
         {
             string input = Microsoft.VisualBasic.Interaction.InputBox(
