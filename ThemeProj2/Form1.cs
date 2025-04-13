@@ -9,7 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ThemeProj2.Properties;
-
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using Microsoft.VisualBasic;
 namespace ThemeProj2
 {
     public partial class Form1 : Form
@@ -381,6 +382,116 @@ namespace ThemeProj2
 
                 LoadPhoto(drv);
             }
+        }
+
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string filter = GenerateFilter();
+            dvArtists.RowFilter = filter;
+        }
+        private string GenerateFilter()
+        {
+            StringBuilder filter = new StringBuilder();
+
+            if (!string.IsNullOrEmpty(textBox1.Text))
+            {
+                filter.Append($"Style_Music LIKE '%{textBox1.Text}%'");
+            }
+
+            if (!string.IsNullOrEmpty(textBox2.Text))
+            {
+                if (filter.Length > 0) filter.Append(" AND ");
+                filter.Append($"start_year >= {textBox2.Text}");
+            }
+
+            if (!string.IsNullOrEmpty(textBox3.Text))
+            {
+                if (filter.Length > 0) filter.Append(" AND ");
+                filter.Append($"start_year <= {textBox3.Text}");
+            }
+
+            if (comboBox1.SelectedIndex != -1)
+            {
+                dvArtistsAlbums.RowFilter = $"genre_id = {comboBox1.SelectedValue}";
+                if (dvArtistsAlbums.Count == 0) return filter.ToString();
+
+                List<string> games = new List<string>();
+                foreach (DataRowView row in dvArtistsAlbums)
+                {
+                    games.Add(row["ID_Album"].ToString());
+                }
+
+                if (filter.Length > 0) filter.Append(" AND ");
+                filter.Append($"ID_Album IN ({String.Join(",", games)})");
+            }
+
+            return filter.ToString();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            textBox1.Text = "";
+            textBox2.Text = "";
+            textBox3.Text = "";
+            comboBox1.SelectedIndex = -1;
+            dvArtists.RowFilter = "";
+        }
+        private void button3_Click(object sender, EventArgs e)
+        {
+            string genre = comboBox1.Text;
+            string year = textBox4.Text;
+            string namePart = textBox5.Text;
+
+            List<string> filters = new List<string>();
+
+            if (!string.IsNullOrEmpty(genre))
+                filters.Add($"Style_Music = '{genre}'");
+
+            if (!string.IsNullOrEmpty(year))
+                filters.Add($"start_year = '{year}'");
+
+            if (!string.IsNullOrEmpty(namePart))
+                filters.Add($"Name_Author LIKE '%{namePart}%'");
+            string joiner = radioButton1.Checked ? " AND " : " OR ";
+            string finalFilter = string.Join(joiner, filters);
+
+            dvArtists.RowFilter = finalFilter;
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            string input = Microsoft.VisualBasic.Interaction.InputBox(
+        "Введіть назву альбому або частину назви:", "Розширений пошук");
+
+            if (!string.IsNullOrEmpty(input))
+            {
+                // Пошук за частковим збігом
+                DataRow[] results = ds.Tables["Albums"].Select($"Name_Album LIKE '%{input}%'");
+
+                if (results.Length > 0)
+                {
+                    string message = $"Знайдено {results.Length} результат(ів):\n";
+                    foreach (var row in results)
+                    {
+                        message += $"- {row["Name_Album"]}: Рік випуску: {row["Year_Album"]}, Кількість треків: {row["tracks_number"]}\n";
+                    }
+                    MessageBox.Show(message, "Результати пошуку");
+                }
+                else
+                {
+                    MessageBox.Show("Жодного альбому не знайдено.", "Пошук");
+                }
+            }
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
         }
 
         private void button5_Click(object sender, EventArgs e)
