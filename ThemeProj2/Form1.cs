@@ -31,6 +31,16 @@ namespace ThemeProj2
             LoadXMLData(currentXMLFilePath);
             SetupDataGridViews();
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            if (!ds.Tables["Artists"].Columns.Contains("Age"))
+            {
+                DataColumn age = new DataColumn("Age", typeof(int));
+                age.Expression = "2025 - start_year";
+                ds.Tables["Artists"].Columns.Add(age);
+            }
+            dvArtists = new DataView(ds.Tables["Artists"]);
+            dvAlbums = new DataView(ds.Tables["Albums"]);
+
+            dataGridView1.DataSource = dvArtists;
         }
 
         private void SetupDataGridViews()
@@ -494,6 +504,69 @@ namespace ThemeProj2
         private void groupBox1_Enter(object sender, EventArgs e)
         {
 
+        }
+
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            if (comboBox2.SelectedIndex == -1) return;
+
+            var artists = ds.Tables["Artists"];
+            var albums = ds.Tables["Albums"];
+            var artAlb = ds.Tables["ArtAlb"];
+
+            switch (comboBox2.SelectedIndex)
+            {
+                case 0:
+                    var query1 = from artist in artists.AsEnumerable()
+                                 join aa in artAlb.AsEnumerable()
+                                 on artist.Field<int>("ID_Author") equals aa.Field<int>("ID_Author") into joined
+                                 select new
+                                 {
+                                     Artist = artist.Field<string>("Name_Author"),
+                                     Style = artist.Field<string>("Style_Music"),
+                                     Albums_Value = joined.Count()
+                                 };
+                    dataGridView3.DataSource = query1.ToList();
+                    break;
+                case 1:
+                    var query2 = from artist in artists.AsEnumerable()
+                                 where artist.Field<int>("start_year") < 1980
+                                 select new
+                                 {
+                                     Artist = artist.Field<string>("Name_Author"),
+                                     Start = artist.Field<int>("start_year"),
+                                     Style = artist.Field<string>("Style_Music"),
+                                     Commentary = artist.Field<int>("start_year") < 1970 ? "Classik" : "Old rock"
+                                 };
+                    dataGridView3.DataSource = query2.ToList();
+                    break;
+                case 2:
+                    string inputCountry = textBox6.Text.Trim();
+                    if (string.IsNullOrEmpty(inputCountry))
+                    {
+                        MessageBox.Show("Enter country name.");
+                        return;
+                    }
+
+                    var query3 = from artist in artists.AsEnumerable()
+                                 where artist.Field<string>("country").ToLower() == inputCountry.ToLower()
+                                 let albumCount = artAlb.AsEnumerable()
+                                     .Count(aa => aa.Field<int>("ID_Author") == artist.Field<int>("ID_Author"))
+                                 select new
+                                 {
+                                     Artist = artist.Field<string>("Name_Author"),
+                                     Country = artist.Field<string>("country"),
+                                     Albums_Value = albumCount,
+                                     Commentary = albumCount > 3 ? "Productive" : "Have potential"
+                                 };
+                    dataGridView3.DataSource = query3.ToList();
+                    break;
+            }
         }
 
         private void button5_Click(object sender, EventArgs e)
