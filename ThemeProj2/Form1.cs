@@ -509,6 +509,9 @@ namespace ThemeProj2
             var albums = ds.Tables["Albums"];
             var artAlb = ds.Tables["ArtAlb"];
 
+            object data = null;
+            string title = "Report result";
+
             switch (comboBox2.SelectedIndex)
             {
                 case 0:
@@ -521,8 +524,10 @@ namespace ThemeProj2
                                      Style = artist.Field<string>("Style_Music"),
                                      Albums_Value = joined.Count()
                                  };
-                    dataGridView3.DataSource = query1.ToList();
+                    data = query1.ToList();
+                    title = "Number of albums by artist";
                     break;
+
                 case 1:
                     var query2 = from artist in artists.AsEnumerable()
                                  where artist.Field<int>("start_year") < 1980
@@ -533,8 +538,10 @@ namespace ThemeProj2
                                      Style = artist.Field<string>("Style_Music"),
                                      Commentary = artist.Field<int>("start_year") < 1970 ? "Classik" : "Old rock"
                                  };
-                    dataGridView3.DataSource = query2.ToList();
+                    data = query2.ToList();
+                    title = "Artists before 1980";
                     break;
+
                 case 2:
                     string inputCountry = textBox6.Text.Trim();
                     if (string.IsNullOrEmpty(inputCountry))
@@ -554,8 +561,28 @@ namespace ThemeProj2
                                      Albums_Value = albumCount,
                                      Commentary = albumCount > 3 ? "Productive" : "Have potential"
                                  };
-                    dataGridView3.DataSource = query3.ToList();
+                    data = query3.ToList();
+                    title = $"Artists from the country: {inputCountry}";
                     break;
+            }
+
+            if (data != null)
+            {
+                Form tempForm = new Form();
+                tempForm.Text = title;
+                tempForm.Width = 410;
+                tempForm.Height = 250;
+                tempForm.StartPosition = FormStartPosition.CenterScreen;
+                tempForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+
+                DataGridView dgv = new DataGridView();
+                dgv.Dock = DockStyle.Fill;
+                dgv.AutoGenerateColumns = false;
+                dgv.DataSource = data;
+                dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+
+                tempForm.Controls.Add(dgv);
+                tempForm.ShowDialog();
             }
         }
 
@@ -576,6 +603,174 @@ namespace ThemeProj2
             DataRowView drv = (DataRowView)dataGridView2.CurrentRow.DataBoundItem;
 
             LoadPhoto(drv);
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            ShowDynamicsByStyle();
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            ShowArtistAgeReport();
+        }
+
+        public void ShowDynamicsByStyle()
+        {
+            try
+            {
+                if (dvArtists == null || dvArtists.Table == null)
+                {
+                    MessageBox.Show("No data available for analysis", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                var reportData = dvArtists.Table.AsEnumerable()
+                    .Where(row => row["start_year"] != DBNull.Value && row["Style_Music"] != DBNull.Value)
+                    .GroupBy(row => new
+                    {
+                        Year = Convert.ToInt32(row["start_year"]),
+                        Style = row["Style_Music"].ToString()
+                    })
+                    .Select(g => new
+                    {
+                        Year = g.Key.Year,
+                        Style = g.Key.Style,
+                        ArtistCount = g.Count(),
+                        TotalYearsAgo = 2025 - g.Key.Year
+                    })
+                    .OrderBy(x => x.Year)
+                    .ToList();
+
+                Form reportForm = new Form();
+                reportForm.Text = "Dynamics by style";
+                reportForm.Width = 500;
+                reportForm.Height = 400;
+                reportForm.StartPosition = FormStartPosition.CenterScreen;
+                reportForm.FormBorderStyle = FormBorderStyle.FixedSingle;
+
+                DataGridView dgv = new DataGridView();
+                dgv.Dock = DockStyle.Fill;
+                dgv.AutoGenerateColumns = false;
+                dgv.ReadOnly = true;
+                dgv.AllowUserToAddRows = false;
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    Name = "Year",
+                    DataPropertyName = "Year",
+                    HeaderText = "Year"
+                });
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    Name = "Style",
+                    DataPropertyName = "Style",
+                    HeaderText = "Style"
+                });
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    Name = "ArtistCount",
+                    DataPropertyName = "ArtistCount",
+                    HeaderText = "Artist Count"
+                });
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    Name = "TotalYearsAgo",
+                    DataPropertyName = "TotalYearsAgo",
+                    HeaderText = "Years ago"
+                });
+
+                dgv.DataSource = reportData;
+                reportForm.Controls.Add(dgv);
+                reportForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error generating report: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public void ShowArtistAgeReport()
+        {
+            try
+            {
+                if (dvArtists == null || dvArtists.Table == null)
+                {
+                    MessageBox.Show("No data available for analysis", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                var reportData = dvArtists.Table.AsEnumerable()
+                    .Where(row => row["start_year"] != DBNull.Value)
+                    .Select(row => new
+                    {
+                        Name = row["Name_Author"].ToString(),
+                        Age = 2025 - Convert.ToInt32(row["start_year"])
+                    })
+                    .GroupBy(actor => (actor.Age / 10) * 10)
+                    .Select(g => new
+                    {
+                        AgeGroupStart = g.Key,
+                        AgeGroup = $"{g.Key}-{g.Key + 9}",
+                        Count = g.Count(),
+                        Actors = string.Join(", ", g.OrderBy(a => a.Name).Select(a => a.Name))
+                    })
+                    .OrderBy(x => x.AgeGroupStart)
+                    .Select(x => new
+                    {
+                        Age_Group = x.AgeGroup,
+                        Number = x.Count,
+                        Artists = x.Actors
+                    })
+                    .ToList();
+
+                Form reportForm = new Form();
+                reportForm.Text = "Artists by years of career";
+                reportForm.Width = 600;
+                reportForm.Height = 190;
+                reportForm.StartPosition = FormStartPosition.CenterScreen;
+                reportForm.FormBorderStyle = FormBorderStyle.FixedSingle;
+
+                DataGridView dgv = new DataGridView();
+                dgv.Dock = DockStyle.Fill;
+                dgv.AutoGenerateColumns = false;
+                dgv.ReadOnly = true;
+                dgv.AllowUserToAddRows = false;
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    DataPropertyName = "Age_Group",
+                    HeaderText = "Age Group"
+                });
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    DataPropertyName = "Number",
+                    HeaderText = "Number"
+                });
+
+                dgv.Columns.Add(new DataGridViewTextBoxColumn()
+                {
+                    DataPropertyName = "Artists",
+                    HeaderText = "Artists",
+                    AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                });
+
+                dgv.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+                dgv.AllowUserToResizeColumns = true;
+                dgv.AllowUserToResizeRows = true;
+
+                dgv.DataSource = reportData;
+                reportForm.Controls.Add(dgv);
+                reportForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error generating report: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
